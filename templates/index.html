@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NBA Game Logs</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        th { cursor: pointer; background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+
+<h2>NBA Player Game Logs</h2>
+
+<input type="text" id="playerInput" placeholder="Enter player name (e.g. Kevin Durant)">
+<select id="seasonSelect">
+    <option value="2025-26">2025-26</option>
+    <option value="2024-25">2024-25</option>
+    <option value="2023-24">2023-24</option>
+</select>
+<button onclick="searchPlayer()">Search</button>
+
+<br><br>
+
+<table id="statsTable">
+    <thead>
+        <tr id="tableHeader"></tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<script>
+let currentData = [];
+let sortDirection = {};
+
+function searchPlayer() {
+    const name = document.getElementById("playerInput").value;
+    const season = document.getElementById("seasonSelect").value;
+
+    fetch(`/search?name=${name}&season=${season}`)
+        .then(res => res.json())
+        .then(data => {
+            currentData = data;
+            renderTable(data);
+        });
+}
+
+function renderTable(data) {
+    const header = document.getElementById("tableHeader");
+    const body = document.querySelector("#statsTable tbody");
+
+    header.innerHTML = "";
+    body.innerHTML = "";
+
+    if (data.length === 0) return;
+
+    const columns = Object.keys(data[0]);
+
+    // Header
+    columns.forEach(col => {
+        const th = document.createElement("th");
+        th.innerText = col;
+        th.onclick = () => sortTable(col);
+        header.appendChild(th);
+    });
+
+    // Rows
+    data.forEach(row => {
+        const tr = document.createElement("tr");
+        columns.forEach(col => {
+            const td = document.createElement("td");
+            td.innerText = row[col];
+            tr.appendChild(td);
+        });
+        body.appendChild(tr);
+    });
+}
+
+function sortTable(column) {
+    sortDirection[column] = !sortDirection[column];
+
+    currentData.sort((a, b) => {
+        let valA = a[column];
+        let valB = b[column];
+
+        if (!isNaN(valA)) {
+            valA = Number(valA);
+            valB = Number(valB);
+        }
+
+        if (valA < valB) return sortDirection[column] ? -1 : 1;
+        if (valA > valB) return sortDirection[column] ? 1 : -1;
+        return 0;
+    });
+
+    renderTable(currentData);
+}
+</script>
+
+</body>
+</html>
