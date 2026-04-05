@@ -1,0 +1,4 @@
+Flask
+nba_api
+pandas
+gunicorn
