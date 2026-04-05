@@ -5,7 +5,6 @@ import pandas as pd
 
 app = Flask(__name__)
 
-# 🔍 Get player ID from full name
 def get_player_id(player_name):
     all_players = players.get_players()
     for p in all_players:
@@ -13,14 +12,10 @@ def get_player_id(player_name):
             return p['id']
     return None
 
-
-# 🏠 Home route (THIS is what you asked about)
 @app.route("/")
 def home():
     return render_template("index.html")
 
-
-# 📊 API route to fetch game logs
 @app.route("/search")
 def search_player():
     name = request.args.get("name")
@@ -37,7 +32,6 @@ def search_player():
 
     df = gamelog.get_data_frames()[0]
 
-    # Select + rename columns
     df = df[[
         "GAME_DATE", "MATCHUP", "MIN", "PTS", "REB", "AST",
         "STL", "BLK", "FGM", "FGA", "FG_PCT",
@@ -45,6 +39,16 @@ def search_player():
         "FTM", "FTA", "FT_PCT",
         "OREB", "DREB", "TOV", "PF"
     ]]
+
+    # Fix opponent display
+    def format_matchup(m):
+        parts = m.split(" ")
+        if "@" in parts:
+            return "@" + parts[-1]
+        else:
+            return "vs " + parts[-1]
+
+    df["MATCHUP"] = df["MATCHUP"].apply(format_matchup)
 
     df.columns = [
         "Date", "Opponent", "MIN", "PTS", "REB", "AST",
@@ -54,12 +58,7 @@ def search_player():
         "OREB", "DREB", "TOV", "PF"
     ]
 
-    # Clean opponent column (remove team prefix like "BKN @ LAL" → "LAL")
-    df["Opponent"] = df["Opponent"].apply(lambda x: x.split(" ")[-1])
-
     return df.to_json(orient="records")
 
-
-# ▶️ Run server
 if __name__ == "__main__":
     app.run(debug=True)

@@ -2,41 +2,111 @@
 <html>
 <head>
     <title>NBA Game Logs</title>
+
     <style>
-        body { font-family: Arial; padding: 20px; }
-        table { border-collapse: collapse; width: 100%; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
-        th { cursor: pointer; background-color: #f2f2f2; }
+        body {
+            font-family: Arial;
+            margin: 0;
+            background-color: #f8f9fa;
+        }
+
+        .navbar {
+            background-color: black;
+            color: white;
+            padding: 12px 20px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .container {
+            padding: 20px;
+        }
+
+        input, select, button {
+            padding: 8px;
+            margin-right: 10px;
+            font-size: 14px;
+        }
+
+        button {
+            cursor: pointer;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+            background-color: white;
+        }
+
+        th {
+            position: sticky;
+            top: 0;
+            background-color: #111;
+            color: white;
+            cursor: pointer;
+            padding: 10px;
+        }
+
+        td {
+            padding: 8px;
+            text-align: center;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        tr:hover {
+            background-color: #ddd;
+        }
     </style>
 </head>
+
 <body>
 
-<h2>NBA Player Game Logs</h2>
+<div class="navbar">
+    NBA Game Logs
+    <span style="float:right; font-size:14px; cursor:pointer;" onclick="goHome()">Home</span>
+</div>
 
-<input type="text" id="playerInput" placeholder="Enter player name (e.g. Kevin Durant)">
-<select id="seasonSelect">
-    <option value="2025-26">2025-26</option>
-    <option value="2024-25">2024-25</option>
-    <option value="2023-24">2023-24</option>
-</select>
-<button onclick="searchPlayer()">Search</button>
+<div class="container">
 
-<br><br>
+    <input type="text" id="playerInput" placeholder="Enter player name">
+    
+    <select id="seasonSelect">
+        <option value="2025-26">2025-26</option>
+        <option value="2024-25">2024-25</option>
+        <option value="2023-24">2023-24</option>
+    </select>
 
-<table id="statsTable">
-    <thead>
-        <tr id="tableHeader"></tr>
-    </thead>
-    <tbody></tbody>
-</table>
+    <button onclick="searchPlayer()">Search</button>
+
+    <table id="statsTable">
+        <thead>
+            <tr id="tableHeader"></tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+</div>
 
 <script>
+
 let currentData = [];
-let sortDirection = {};
+let sortState = {};
+
+function goHome() {
+    window.location.href = "/";
+}
 
 function searchPlayer() {
     const name = document.getElementById("playerInput").value;
     const season = document.getElementById("seasonSelect").value;
+
+    // Update URL
+    const url = `/?player=${encodeURIComponent(name)}&season=${season}`;
+    window.history.pushState({}, '', url);
 
     fetch(`/search?name=${name}&season=${season}`)
         .then(res => res.json())
@@ -57,7 +127,6 @@ function renderTable(data) {
 
     const columns = Object.keys(data[0]);
 
-    // Header
     columns.forEach(col => {
         const th = document.createElement("th");
         th.innerText = col;
@@ -65,22 +134,30 @@ function renderTable(data) {
         header.appendChild(th);
     });
 
-    // Rows
     data.forEach(row => {
         const tr = document.createElement("tr");
+
         columns.forEach(col => {
             const td = document.createElement("td");
             td.innerText = row[col];
             tr.appendChild(td);
         });
+
         body.appendChild(tr);
     });
 }
 
 function sortTable(column) {
-    sortDirection[column] = !sortDirection[column];
+    sortState[column] = !sortState[column];
 
     currentData.sort((a, b) => {
+
+        if (column === "Date") {
+            const d1 = new Date(a[column]);
+            const d2 = new Date(b[column]);
+            return sortState[column] ? d1 - d2 : d2 - d1;
+        }
+
         let valA = a[column];
         let valB = b[column];
 
@@ -89,13 +166,34 @@ function sortTable(column) {
             valB = Number(valB);
         }
 
-        if (valA < valB) return sortDirection[column] ? -1 : 1;
-        if (valA > valB) return sortDirection[column] ? 1 : -1;
+        if (valA < valB) return sortState[column] ? -1 : 1;
+        if (valA > valB) return sortState[column] ? 1 : -1;
         return 0;
     });
 
     renderTable(currentData);
 }
+
+
+// Load from URL if exists
+window.onload = function () {
+    const params = new URLSearchParams(window.location.search);
+    const player = params.get("player");
+    const season = params.get("season");
+
+    if (player) {
+        document.getElementById("playerInput").value = player;
+        if (season) document.getElementById("seasonSelect").value = season;
+
+        fetch(`/search?name=${player}&season=${season}`)
+            .then(res => res.json())
+            .then(data => {
+                currentData = data;
+                renderTable(data);
+            });
+    }
+};
+
 </script>
 
 </body>
